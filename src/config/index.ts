@@ -22,6 +22,9 @@ export default {
     webhookSecret: process.env.WEBHOOK_SECRET,
     paymentSuccess: process.env.WEBHOOK_SECRET,
   },
+  domain: process.env.DOMAIN!,
+  shortUrlLength: process.env.SHORT_URL_LENGTH!,
+  base62: process.env.BASE62!,
   email: {
     from: process.env.EMAIL_FROM,
     user: process.env.EMAIL_USER,
@@ -50,11 +53,7 @@ export default {
     INDEX: process.env.INDEX!,
   },
 
-  twilio: {
-    accountSid: process.env.TWILIO_ACCOUNT_SID,
-    authToken: process.env.TWILIO_AUTH_TOKEN,
-    twilioNumber: process.env.TWILIO_NUMBER,
-  },
+  
 
   // rabbitmq
   rabbitmq: {
