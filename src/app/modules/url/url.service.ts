@@ -30,6 +30,11 @@ const createUrlShortIntoDB = async (payload: IUrl, user: JwtPayload) => {
 const getUrlShortToOriginalUrlIntoDB = async (
   sUrl: string,
   visitorId: string,
+  meta: {
+    browser: string;
+    trafficSource: string;
+    country: string;
+  },
 ) => {
   const cached = await redisService.get(`url:${config.domain}/${sUrl}`);
 
@@ -100,6 +105,9 @@ const getUrlShortToOriginalUrlIntoDB = async (
     urlId: _id!,
     userId: visitorId,
     clickTime: new Date(),
+    country: meta.country,
+    browser: meta.browser,
+    trafficSource: meta.trafficSource,
   });
   return originalUrl!;
 };
