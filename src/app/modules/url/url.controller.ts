@@ -5,6 +5,7 @@ import { urlService } from "./url.service";
 import { request, Request, Response } from "express";
 import { clickRecordService } from "../clickRecord/clickRecord.service";
 import visitorIdFromRequest from "../../../util/visitorId";
+import { clickMeta } from "../../../util/clickMeta";
 
 const createUrlShort = catchAsync(async (req: Request, res: Response) => {
   const url = await urlService.createUrlShortIntoDB(req.body, req.user);
@@ -19,9 +20,11 @@ const createUrlShort = catchAsync(async (req: Request, res: Response) => {
 const getUrlShortToOriginalUrl = catchAsync(
   async (req: Request, res: Response) => {
     const { sUrl } = req.params;
+    const meta = clickMeta.clickMetaFromRequest(req, req.hostname);
     const url = await urlService.getUrlShortToOriginalUrlIntoDB(
       sUrl,
       visitorIdFromRequest(req),
+      meta,
     );
     return res.redirect(url);
   },
