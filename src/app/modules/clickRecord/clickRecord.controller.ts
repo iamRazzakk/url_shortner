@@ -14,8 +14,23 @@ const createClickRecord = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
+const getClickRecordByUrlId = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await clickRecordService.getClickRecordByUrlId(
+      id,
+      req.query,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: "Click record fetched successfully",
+      data: result,
+    });
+  },
+);
 
 export const clickRecordController = {
   createClickRecord,
+  getClickRecordByUrlId,
 };
