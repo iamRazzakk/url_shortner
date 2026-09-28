@@ -14,8 +14,6 @@ router
     urlController.createUrlShort,
   );
 
-router
-  .route("/:sUrl")
-  .get(auth(USER_ROLES.USER), urlController.getUrlShortToOriginalUrl);
+router.route("/:sUrl").get(urlController.getUrlShortToOriginalUrl);
 
 export const urlRoutes = router;

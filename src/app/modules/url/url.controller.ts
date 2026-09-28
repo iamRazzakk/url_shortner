@@ -18,12 +18,7 @@ const getUrlShortToOriginalUrl = catchAsync(
   async (req: Request, res: Response) => {
     const { sUrl } = req.params;
     const url = await urlService.getUrlShortToOriginalUrl(sUrl);
-    sendResponse(res, {
-      success: true,
-      statusCode: StatusCodes.OK,
-      message: "URL fetched successfully",
-      data: url,
-    });
+    return res.redirect(url);
   },
 );
 
