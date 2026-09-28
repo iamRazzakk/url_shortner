@@ -1,63 +1,103 @@
+import config from '../config';
 import { ICreateAccount, IResetPassword } from '../types/emailTemplate';
 
+const BRAND = 'ShortUrl';
+
+const logoSrc = () => {
+    const domain = (config.domain || '').replace(/\/$/, '');
+    return `${domain}/shorturl-logo.png`;
+};
+
+const layout = (title: string, body: string) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F4F6FB; font-family:Arial, Helvetica, sans-serif; color:#1E1B4B;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F4F6FB; padding:32px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#ffffff; border-radius:16px; overflow:hidden;">
+                    <tr>
+                        <td style="background-color:#1E1B4B; padding:28px 32px; text-align:center;">
+                            <img src="${logoSrc()}" alt="${BRAND}" width="72" height="72" style="display:block; margin:0 auto 12px; border-radius:16px;" />
+                            <p style="margin:0; font-size:20px; font-weight:700; letter-spacing:0.4px; color:#ffffff;">${BRAND}</p>
+                            <p style="margin:6px 0 0; font-size:13px; color:#99F6E4;">Short links. Clear clicks.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:32px;">
+                            ${body}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0 32px 28px; text-align:center;">
+                            <p style="margin:0; font-size:12px; line-height:1.6; color:#94A3B8;">
+                                If you did not request this email, you can safely ignore it.
+                            </p>
+                            <p style="margin:8px 0 0; font-size:12px; color:#94A3B8;">
+                                &copy; ${new Date().getFullYear()} ${BRAND}. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+`;
+
+const otpBlock = (otp: number | string) => `
+    <p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#475569; text-align:center;">Your one-time code</p>
+    <div style="margin:0 auto 16px; max-width:220px; background-color:#1E1B4B; border-radius:12px; padding:14px 20px; text-align:center;">
+        <span style="font-size:28px; font-weight:700; letter-spacing:6px; color:#2DD4BF;">${otp}</span>
+    </div>
+    <p style="margin:0; font-size:14px; line-height:1.6; color:#64748B; text-align:center;">This code expires in 3 minutes.</p>
+`;
+
 const createAccount = (values: ICreateAccount) => {
-    const data = {
-        to: values.email,
-        subject: 'Verify your account',
-        html: `
-            <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 50px; padding: 20px; color: #555;">
-                <div style="width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-    
-                    <!-- Logo -->
-                    <img src="https://i.postimg.cc/6pgNvKhD/logo.png" alt="Servi Logo" style="display: block; margin: 0 auto 20px; width:150px" />
-
-                    <!-- Greeting -->
-                    <h2 style="color: #D0A933; font-size: 24px; margin-bottom: 20px;">Hey, ${values.name}!</h2>
-
-                    <!-- Verification Instructions -->
-                    <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Thank you for signing up for Servi. Please verify your email address to activate your account.</p>
-
-                    <!-- OTP Section -->
-                    <div style="text-align: center;">
-                        <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Your single use code is:</p>
-                        <div style="background-color: #D0A933; width: 120px; padding: 10px; text-align: center; border-radius: 8px; color: #fff; font-size: 25px; letter-spacing: 2px; margin: 20px auto;">${values.otp}</div>
-                        <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">This code is valid for 3 minutes.</p>
-                    </div>
-
-                    <!-- Footer -->
-                    <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">If you did not sign up for Servi, please ignore this email.</p>
-                    <p style="color: #999; font-size: 12px; text-align: center;">&copy; 2024 Servi. All rights reserved.</p>
-
-                </div>
-            </body>
+    const html = layout(
+        'Verify your ShortUrl account',
         `
-    }
+            <h1 style="margin:0 0 12px; font-size:22px; font-weight:700; color:#1E1B4B;">Hey, ${values.name}</h1>
+            <p style="margin:0 0 24px; font-size:15px; line-height:1.6; color:#475569;">
+                Thanks for joining ${BRAND}. Verify your email to start turning long links into short ones.
+            </p>
+            ${otpBlock(values.otp)}
+        `
+    );
 
-    return data;
-}
-
+    return {
+        to: values.email,
+        subject: 'Verify your ShortUrl account',
+        html,
+    };
+};
 
 const resetPassword = (values: IResetPassword) => {
-    const data = {
+    const html = layout(
+        'Reset your ShortUrl password',
+        `
+            <h1 style="margin:0 0 12px; font-size:22px; font-weight:700; color:#1E1B4B;">Reset your password</h1>
+            <p style="margin:0 0 24px; font-size:15px; line-height:1.6; color:#475569;">
+                Use this code to set a new password for your ${BRAND} account.
+            </p>
+            ${otpBlock(values.otp)}
+        `
+    );
+
+    return {
         to: values.email,
-        subject: 'Reset your password',
-        html: `
-            <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 50px; padding: 20px; color: #555;">
-                <div style="width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                    <img src="https://i.postimg.cc/6pgNvKhD/logo.png" alt="Logo" style="display: block; margin: 0 auto 20px; width:150px" />
-                    <div style="text-align: center;">
-                        <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Your single use code is:</p>
-                        <div style="background-color: #277E16; width: 120px; padding: 10px; text-align: center; border-radius: 8px; color: #fff; font-size: 25px; letter-spacing: 2px; margin: 20px auto;">${values.otp}</div>
-                        <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">This code is valid for 3 minutes.</p>
-                    </div>
-                </div>
-            </body>
-        `,
+        subject: 'Reset your ShortUrl password',
+        html,
     };
-    return data;
 };
 
 export const emailTemplate = {
     createAccount,
-    resetPassword
+    resetPassword,
 };

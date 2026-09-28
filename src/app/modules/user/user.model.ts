@@ -41,7 +41,7 @@ const userSchema = new Schema<IUser, UserModal>(
     },
     verified: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     isBanned: {
       type: Boolean,
@@ -56,7 +56,7 @@ const userSchema = new Schema<IUser, UserModal>(
   },
 );
 // for fast lookup
-// userSchema.index({ email: 1 });
+userSchema.index({ email: 1 });
 // if filtering by role often
 userSchema.index({ role: 1 });
 //exist user check

@@ -1,4 +1,3 @@
-import { USER_ROLES } from "../../../enums/user";
 import { IUser } from "./user.interface";
 import { JwtPayload } from "jsonwebtoken";
 import { User } from "./user.model";
@@ -6,16 +5,13 @@ import { StatusCodes } from "http-status-codes";
 import ApiError from "../../../errors/ApiErrors";
 import generateOTP from "../../../util/generateOTP";
 import { emailTemplate } from "../../../shared/emailTemplate";
-import { emailProducer } from "../../../services/email.producer";
-import { logger } from "../../../shared/logger";
-import crypto from "crypto";
-import redisClient from "../../../config/redis.config";
-import worker from "../../../worker/email.worker";
-import { dataStoreToRedis } from "../../redis/redis.service";
+import { randomUUID } from "crypto";
+import { redisService } from "../../redis/redis.service";
+import { emailQueue } from "../../../config/bullMQ.config";
 
 const createAdminToDB = async (payload: any): Promise<IUser> => {
   // check admin is exist or not;
-  const isExistAdmin = await User.findOne({ email: payload.email });
+  const isExistAdmin = await User.findOne({ email: payload.email }).lean();
   if (isExistAdmin) {
     throw new ApiError(StatusCodes.CONFLICT, "This Email already taken");
   }
@@ -50,21 +46,24 @@ const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
     email: createUser.email!,
   };
 
-  const emailJobId = crypto.randomUUID();
+  const emailJobId = randomUUID();
   const createAccountTemplate = emailTemplate.createAccount(values);
-  // need to use bullmq to send email
-  // const result = await dataStoreToRedis(
-  //   `authentication:${createUser.email.toString()}`,
-  //   JSON.stringify({
-  //     email: createUser?.email,
-  //     oneTimeCode: otp,
-  //     expireAt: new Date(Date.now() + 3 * 60000),
-  //   }),
-  //   3 * 60 * 1000,
-  // );
-  // if (result === null) {
-  //   throw new ApiError(StatusCodes.BAD_REQUEST, "Failed to store otp in redis");
-  // }
+  const emailData = {
+    jobId: emailJobId,
+    to: createAccountTemplate.to,
+    subject: createAccountTemplate.subject,
+    html: createAccountTemplate.html,
+    type: "create_account",
+  };
+
+  //save to redis
+  await emailQueue.add("send-email", emailData);
+  // store otp to redis
+  await redisService.post({
+    key: `otp:${createUser.email}`,
+    value: Number(otp),
+    expiration: 3 * 60, // 3 minutes
+  });
   return createUser;
 };
 

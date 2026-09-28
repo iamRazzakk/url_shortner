@@ -21,3 +21,13 @@ export const emailQueue = new Queue("emailQueue", {
     removeOnFail: false,
   },
 });
+
+export const clickQueue = new Queue("clickQueue", {
+  connection: connectionBullMQ,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 2000 },
+    removeOnComplete: true,
+    removeOnFail: false,
+  },
+});

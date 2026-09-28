@@ -6,10 +6,16 @@ import validateRequest from "../../middlewares/validateRequest";
 import { urlValidation } from "./url.validation";
 
 const router = Router();
-router.route("/")
-    .post(auth(USER_ROLES.USER), validateRequest(urlValidation.createUrlSchema), urlController.createUrlShort);
+router
+  .route("/")
+  .post(
+    auth(USER_ROLES.USER),
+    validateRequest(urlValidation.createUrlSchema),
+    urlController.createUrlShort,
+  );
 
-
-
+router
+  .route("/:sUrl")
+  .get(auth(USER_ROLES.USER), urlController.getUrlShortToOriginalUrl);
 
 export const urlRoutes = router;
