@@ -12,8 +12,10 @@ router
     auth(USER_ROLES.USER),
     validateRequest(urlValidation.createUrlSchema),
     urlController.createUrlShort,
-  );
+  )
+  .get(auth(USER_ROLES.USER), urlController.getMyAllMyUrlShort);
 
 router.route("/:sUrl").get(urlController.getUrlShortToOriginalUrl);
+router.route("/:id").patch(auth(USER_ROLES.USER), urlController.updateUrlShort);
 
 export const urlRoutes = router;

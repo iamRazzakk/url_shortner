@@ -7,6 +7,8 @@ import { StatusCodes } from "http-status-codes";
 import ApiError from "../../../errors/ApiErrors";
 import { clickQueue } from "../../../config/bullMQ.config";
 import { redisService } from "../../redis/redis.service";
+import { Types } from "mongoose";
+import { clickRecordService } from "../clickRecord/clickRecord.service";
 
 const createUrlShortIntoDB = async (payload: IUrl, user: JwtPayload) => {
   // exist or not
@@ -25,28 +27,55 @@ const createUrlShortIntoDB = async (payload: IUrl, user: JwtPayload) => {
   }
 };
 
-const getUrlShortToOriginalUrl = async (sUrl: string) => {
+const getUrlShortToOriginalUrlIntoDB = async (
+  sUrl: string,
+  visitorId: string,
+) => {
   const cached = await redisService.get(`url:${config.domain}/${sUrl}`);
 
   let originalUrl: string;
   let dbClicks: number | undefined;
+  let expiresAt: Date | string | null | undefined;
+  let useCache = false;
+  let _id: Types.ObjectId;
 
   if (cached) {
-    originalUrl = JSON.parse(cached)?.originalUrl;
-    dbClicks = JSON.parse(cached)?.totalClicks;
-    console.log("dbClicks", Number(dbClicks) || 0);
-    console.log("From Cache");
-  } else {
+    const parsed = JSON.parse(cached);
+
+    if (!("expiresAt" in parsed) || !parsed._id) {
+      await redisService.del(`url:${config.domain}/${sUrl}`);
+    } else {
+      expiresAt = parsed.expiresAt;
+      if (expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+        await redisService.del(`url:${config.domain}/${sUrl}`);
+        throw new ApiError(StatusCodes.NOT_FOUND, "URL expired");
+      }
+      originalUrl = parsed.originalUrl;
+      _id = parsed._id;
+      dbClicks = parsed.totalClicks;
+      useCache = true;
+      console.log("From Cache");
+    }
+  }
+
+  if (!useCache) {
     const data = await urlModel
       .findOne({ shortUrl: `${config.domain}/${sUrl}` })
       .lean();
     if (!data) {
       throw new ApiError(StatusCodes.NOT_FOUND, "URL not found");
     }
-    originalUrl = data?.originalUrl;
-    dbClicks = data?.totalClicks;
+    expiresAt = data.expiresAt;
+    if (expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+      await redisService.del(`url:${config.domain}/${sUrl}`);
+      throw new ApiError(StatusCodes.NOT_FOUND, "URL expired");
+    }
+    originalUrl = data.originalUrl;
+    dbClicks = data.totalClicks;
+    _id = data._id;
     console.log("From DB");
   }
+
   const existingCount = await redisService.hget(`count-click`, sUrl);
   if (existingCount === null) {
     let baseCount = Number(dbClicks) || 0;
@@ -57,15 +86,45 @@ const getUrlShortToOriginalUrl = async (sUrl: string) => {
   if (totalClicks >= 50) {
     await redisService.post({
       key: `url:${config.domain}/${sUrl}`,
-      value: JSON.stringify({ originalUrl, totalClicks }),
+      value: JSON.stringify({
+        _id: new Types.ObjectId(_id!),
+        originalUrl: originalUrl!,
+        totalClicks: Number(totalClicks),
+        expiresAt: expiresAt ?? null,
+      }),
       expiration: 10 * 60,
     });
   }
   await clickQueue.add("count-click", sUrl, { delay: 5000 });
-  return originalUrl;
+  await clickRecordService.createClickRecord({
+    urlId: _id!,
+    userId: visitorId,
+    clickTime: new Date(),
+  });
+  return originalUrl!;
+};
+
+const getMyAllMyUrlShortIntoDB = async (user: JwtPayload) => {
+  const data = await urlModel.find({ userId: user.id }).lean();
+  if (!data) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "URLs not found");
+  }
+  return data;
+};
+
+const updateUrlShortIntoDB = async (id: string, payload: Partial<IUrl>) => {
+  const data = await urlModel
+    .findByIdAndUpdate(id, payload, { new: true })
+    .lean();
+  if (!data) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "URL not found");
+  }
+  return data;
 };
 
 export const urlService = {
   createUrlShortIntoDB,
-  getUrlShortToOriginalUrl,
+  getUrlShortToOriginalUrlIntoDB,
+  updateUrlShortIntoDB,
+  getMyAllMyUrlShortIntoDB,
 };
